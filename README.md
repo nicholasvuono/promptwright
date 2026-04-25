@@ -1,2 +1,2 @@
-# promptwright
-AI harness for intent-based testing, built around playwright-cli
+A sample command-line application with an entrypoint in `bin/`, library code
+in `lib/`, and example unit test in `test/`.
