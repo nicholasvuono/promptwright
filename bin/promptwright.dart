@@ -5,12 +5,16 @@ void main(List<String> arguments) async {
   final gemini = ai.GeminiClient();
   gemini.init();
 
+  final prompt =
+      'Read and briefly describe in one sentence what it does /Users/nick/promptwright/bin/promptwright.dart';
+
+  print('\x1b[94m[PROMPT]\x1b[0m: $prompt');
+
   final response = await gemini.ai.generate(
     model: googleAI.gemini('gemini-2.5-flash'),
-    prompt:
-        'Read and describe what is in the following file the following file /Users/nick/promptwright/bin/promptwright.dart',
+    prompt: prompt,
     tools: [gemini.bash],
   );
 
-  print(response.text);
+  print('\x1b[96m[RESULT]\x1b[0m: ${response.text}');
 }

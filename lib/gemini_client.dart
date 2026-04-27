@@ -29,6 +29,7 @@ class GeminiClient {
       inputSchema: schemas.BashInput.$schema,
       fn: (input, _) async {
         try {
+          print('\x1b[38;5;166m[BASH]\x1b[0m: ${input.command}');
           final result = await Process.run('bash', ['-c', input.command]);
 
           // Return a structured summary so the agent can react to failure
