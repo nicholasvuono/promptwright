@@ -6,27 +6,25 @@ part of 'schemas.dart';
 // SchemaGenerator
 // **************************************************************************
 
-base class ReadFileInput {
-  factory ReadFileInput.fromJson(Map<String, dynamic> json) =>
-      $schema.parse(json);
+base class BashInput {
+  factory BashInput.fromJson(Map<String, dynamic> json) => $schema.parse(json);
 
-  ReadFileInput._(this._json);
+  BashInput._(this._json);
 
-  ReadFileInput({required String filePath}) {
-    _json = {'filePath': filePath};
+  BashInput({required String command}) {
+    _json = {'command': command};
   }
 
   late final Map<String, dynamic> _json;
 
-  static const SchemanticType<ReadFileInput> $schema =
-      _ReadFileInputTypeFactory();
+  static const SchemanticType<BashInput> $schema = _BashInputTypeFactory();
 
-  String get filePath {
-    return _json['filePath'] as String;
+  String get command {
+    return _json['command'] as String;
   }
 
-  set filePath(String value) {
-    _json['filePath'] = value;
+  set command(String value) {
+    _json['command'] = value;
   }
 
   @override
@@ -39,21 +37,21 @@ base class ReadFileInput {
   }
 }
 
-base class _ReadFileInputTypeFactory extends SchemanticType<ReadFileInput> {
-  const _ReadFileInputTypeFactory();
+base class _BashInputTypeFactory extends SchemanticType<BashInput> {
+  const _BashInputTypeFactory();
 
   @override
-  ReadFileInput parse(Object? json) {
-    return ReadFileInput._(json as Map<String, dynamic>);
+  BashInput parse(Object? json) {
+    return BashInput._(json as Map<String, dynamic>);
   }
 
   @override
   JsonSchemaMetadata get schemaMetadata => JsonSchemaMetadata(
-    name: 'ReadFileInput',
+    name: 'BashInput',
     definition: $Schema
         .object(
-          properties: {'filePath': $Schema.string()},
-          required: ['filePath'],
+          properties: {'command': $Schema.string()},
+          required: ['command'],
         )
         .value,
     dependencies: [],

@@ -7,8 +7,9 @@ void main(List<String> arguments) async {
 
   final response = await gemini.ai.generate(
     model: googleAI.gemini('gemini-2.5-flash'),
-    prompt: '/Users/nick/promptwright/bin/promptwright.dart',
-    tools: [gemini.readFile],
+    prompt:
+        'Read and describe what is in the following file the following file /Users/nick/promptwright/bin/promptwright.dart',
+    tools: [gemini.bash],
   );
 
   print(response.text);
