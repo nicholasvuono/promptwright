@@ -1,7 +1,8 @@
 import 'dart:io';
 
 import 'package:genkit/genkit.dart';
-import 'package:genkit_google_genai/genkit_google_genai.dart';
+// import 'package:genkit_google_genai/genkit_google_genai.dart';
+import 'package:genkit_openai/genkit_openai.dart';
 
 import 'package:promptwright/schemas/schemas.dart' as schemas;
 
@@ -10,7 +11,9 @@ class GeminiClient {
   late Tool bash, playwrightCli;
 
   void init() {
-    ai = Genkit(plugins: [googleAI()]);
+    ai = Genkit(
+      plugins: [openAI(apiKey: Platform.environment['OPENAI_API_KEY'])],
+    );
     defineLBashTool();
   }
 
