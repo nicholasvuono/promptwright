@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:genkit/genkit.dart';
 import 'package:genkit_google_genai/genkit_google_genai.dart';
 
-import 'package:promptwright/schemas.dart' as schemas;
+import 'package:promptwright/schemas/schemas.dart' as schemas;
 
 class GeminiClient {
   late Genkit ai;
-  late Tool bash;
+  late Tool bash, playwrightCli;
 
   void init() {
     ai = Genkit(plugins: [googleAI()]);
@@ -44,4 +44,34 @@ class GeminiClient {
       },
     );
   }
+
+  // void definePlaywrightCliTool() {
+  //   playwrightCli = ai.defineTool(
+  //     name: 'playwrightCli',
+  //     description: '''
+  //       Executes playwright-cli commands. Check playwright-cli --help for available commands.
+  //       The tool returns stdout, stderr, and the exit code. If a command fails, use the stderr or exit code to diagnose and retry.
+  //     ''',
+  //     inputSchema: schemas.PlaywrightCliInput.$schema,
+  //     fn: (input, _) async {
+  //       try {
+  //         print('\x1b[38;5;166m[PLAYWRIGHT-CLI]\x1b[0m: ${input.command}');
+  //         final result = await Process.run('bash', [
+  //           '-c',
+  //           'playwright-cli',
+  //           input.command,
+  //         ]);
+
+  //         // Return a structured summary so the agent can react to failure
+  //         return {
+  //           'stdout': result.stdout,
+  //           'stderr': result.stderr,
+  //           'exitCode': result.exitCode,
+  //         }.toString();
+  //       } catch (e) {
+  //         return 'Execution failed: $e';
+  //       }
+  //     },
+  //   );
+  // }
 }
