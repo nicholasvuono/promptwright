@@ -73,9 +73,16 @@ Caching Rules:
 
 ## General Rules to Follow
 
-1. Always prefer to use `playwright-cli` commands for better caching and readability.
-2. Only use `playwright-cli --raw run-code` if absolutely necessary. Use `--raw run-code` as a last resort for complex logic that can't be easily expressed with standard commands.
-3. For validations make the page.eval as succint and simple as possible. Avoid complex logic in the eval and prefer to use playwright-cli's built-in assertions and checks when possible for better reliability and clearer error messages.
-4. Assume you will not always have a snapshot reference when running these tests in the future, prefer Playwright locators (getByTestId, getByRole, etc) and css selectors over snapshot references for more robust and maintainable tests.
-5. Always close the browser at the end of the test run to ensure a clean slate for the next run, even if errors occur.
-6. Keep the test run summary concise and simple (reference the format in the given example above)
+1. Always prefer `playwright-cli` commands.
+2. Only use `playwright-cli --raw run-code` if absolutely necessary. Use `--raw run-code` as a last resort for complex logic.
+3. Use concise, simple, and succint page.eval commands for validations. Avoid complex logic.
+4. Assume you will not snapshots to reference. Prefer Playwright locators (getByTestId, getByRole, etc) and css selectors over snapshot references.
+5. Always close the browser at test end.
+6. Use following format for end of test run summary:
+```
+Test Run Summary: PASSED
+- ✅ open https://demo.playwright.dev/todomvc/
+- ✅ fill "css=input.new-todo" "grocery shopping" --submit
+- ✅ eval ... 
+- ✅ close
+```
