@@ -6,18 +6,144 @@ part of 'schemas.dart';
 // SchemaGenerator
 // **************************************************************************
 
-base class BashInput {
-  factory BashInput.fromJson(Map<String, dynamic> json) => $schema.parse(json);
+base class ReadFileInput {
+  factory ReadFileInput.fromJson(Map<String, dynamic> json) =>
+      $schema.parse(json);
 
-  BashInput._(this._json);
+  ReadFileInput._(this._json);
 
-  BashInput({required String command}) {
+  ReadFileInput({required String filePath}) {
+    _json = {'filePath': filePath};
+  }
+
+  late final Map<String, dynamic> _json;
+
+  static const SchemanticType<ReadFileInput> $schema =
+      _ReadFileInputTypeFactory();
+
+  String get filePath {
+    return _json['filePath'] as String;
+  }
+
+  set filePath(String value) {
+    _json['filePath'] = value;
+  }
+
+  @override
+  String toString() {
+    return _json.toString();
+  }
+
+  Map<String, dynamic> toJson() {
+    return _json;
+  }
+}
+
+base class _ReadFileInputTypeFactory extends SchemanticType<ReadFileInput> {
+  const _ReadFileInputTypeFactory();
+
+  @override
+  ReadFileInput parse(Object? json) {
+    return ReadFileInput._(json as Map<String, dynamic>);
+  }
+
+  @override
+  JsonSchemaMetadata get schemaMetadata => JsonSchemaMetadata(
+    name: 'ReadFileInput',
+    definition: $Schema
+        .object(
+          properties: {'filePath': $Schema.string()},
+          required: ['filePath'],
+        )
+        .value,
+    dependencies: [],
+  );
+}
+
+base class FileUpdateInput {
+  factory FileUpdateInput.fromJson(Map<String, dynamic> json) =>
+      $schema.parse(json);
+
+  FileUpdateInput._(this._json);
+
+  FileUpdateInput({required String path, required String content}) {
+    _json = {'path': path, 'content': content};
+  }
+
+  late final Map<String, dynamic> _json;
+
+  static const SchemanticType<FileUpdateInput> $schema =
+      _FileUpdateInputTypeFactory();
+
+  String get path {
+    return _json['path'] as String;
+  }
+
+  set path(String value) {
+    _json['path'] = value;
+  }
+
+  String get content {
+    return _json['content'] as String;
+  }
+
+  set content(String value) {
+    _json['content'] = value;
+  }
+
+  @override
+  String toString() {
+    return _json.toString();
+  }
+
+  Map<String, dynamic> toJson() {
+    return _json;
+  }
+}
+
+base class _FileUpdateInputTypeFactory extends SchemanticType<FileUpdateInput> {
+  const _FileUpdateInputTypeFactory();
+
+  @override
+  FileUpdateInput parse(Object? json) {
+    return FileUpdateInput._(json as Map<String, dynamic>);
+  }
+
+  @override
+  JsonSchemaMetadata get schemaMetadata => JsonSchemaMetadata(
+    name: 'FileUpdateInput',
+    definition: $Schema
+        .object(
+          properties: {
+            'path': $Schema.string(
+              description:
+                  'The relative path of the file to update within the allowed directory.',
+            ),
+            'content': $Schema.string(
+              description: 'The new content to write to the file.',
+            ),
+          },
+          required: ['path', 'content'],
+        )
+        .value,
+    dependencies: [],
+  );
+}
+
+base class PlaywrightCliInput {
+  factory PlaywrightCliInput.fromJson(Map<String, dynamic> json) =>
+      $schema.parse(json);
+
+  PlaywrightCliInput._(this._json);
+
+  PlaywrightCliInput({required String command}) {
     _json = {'command': command};
   }
 
   late final Map<String, dynamic> _json;
 
-  static const SchemanticType<BashInput> $schema = _BashInputTypeFactory();
+  static const SchemanticType<PlaywrightCliInput> $schema =
+      _PlaywrightCliInputTypeFactory();
 
   String get command {
     return _json['command'] as String;
@@ -37,17 +163,18 @@ base class BashInput {
   }
 }
 
-base class _BashInputTypeFactory extends SchemanticType<BashInput> {
-  const _BashInputTypeFactory();
+base class _PlaywrightCliInputTypeFactory
+    extends SchemanticType<PlaywrightCliInput> {
+  const _PlaywrightCliInputTypeFactory();
 
   @override
-  BashInput parse(Object? json) {
-    return BashInput._(json as Map<String, dynamic>);
+  PlaywrightCliInput parse(Object? json) {
+    return PlaywrightCliInput._(json as Map<String, dynamic>);
   }
 
   @override
   JsonSchemaMetadata get schemaMetadata => JsonSchemaMetadata(
-    name: 'BashInput',
+    name: 'PlaywrightCliInput',
     definition: $Schema
         .object(
           properties: {'command': $Schema.string()},

@@ -3,10 +3,25 @@ import 'package:schemantic/schemantic.dart';
 part 'schemas.g.dart';
 
 @Schema()
-abstract class $BashInput {
+abstract class $ReadFileInput {
+  String get filePath;
+}
+
+@Schema()
+abstract class $FileUpdateInput {
+  @Field(
+    description:
+        'The relative path of the file to update within the allowed directory.',
+  )
+  String get path;
+
+  @Field(description: 'The new content to write to the file.')
+  String get content;
+}
+
+@Schema()
+abstract class $PlaywrightCliInput {
   String get command;
-  // TODO: gate system access via Process.run invocation in the future
-  // String get workingDirectory;
 }
 
 @Schema()

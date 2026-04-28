@@ -8,31 +8,43 @@ import 'package:promptwright/schemas/schemas.dart' as schemas;
 
 class GeminiClient {
   late Genkit ai;
-  late Tool bash, playwrightCli;
+  late Tool playwrightCli, readFile, updateFileTool;
 
   void init() {
     ai = Genkit(
       plugins: [openAI(apiKey: Platform.environment['OPENAI_API_KEY'])],
     );
-    defineLBashTool();
+    defineReadFileTool();
+    definePlaywrightCliTool();
+    defineUpdateFileTool();
   }
 
-  void defineLBashTool() {
-    bash = ai.defineTool(
-      name: 'runBash',
+  void defineReadFileTool() {
+    readFile = ai.defineTool(
+      name: 'readFile',
+      description: 'Reads the contents of a give file.',
+      inputSchema: schemas.ReadFileInput.$schema,
+      fn: (input, _) async {
+        print('\x1b[38;5;166m[READ FILE]\x1b[0m: ${input.filePath}');
+        final contents = await File(
+          input.filePath,
+        ).readAsString(); // use streams later
+        return contents;
+      },
+    );
+  }
+
+  void definePlaywrightCliTool() {
+    playwrightCli = ai.defineTool(
+      name: 'playwrightCli',
       description: '''
-        Executes an arbitrary bash command or script. This is the primary tool for 
-        interacting with the operating system. Use it to:
-        1. File Management: Create, move, delete, or search files (mkdir, rm, grep, find).
-        2. Development: Run compilers, build scripts, or dependency managers (npm, dart, cargo).
-        3. System State: Check environment variables, current directory, or network status.
-        4. Orchestration: Chain multiple commands using pipes (|), redirects (>), or logical operators (&&, ||).
+        Executes playwright-cli commands. Check playwright-cli --help for available commands.
         The tool returns stdout, stderr, and the exit code. If a command fails, use the stderr or exit code to diagnose and retry.
       ''',
-      inputSchema: schemas.BashInput.$schema,
+      inputSchema: schemas.PlaywrightCliInput.$schema,
       fn: (input, _) async {
         try {
-          print('\x1b[38;5;166m[BASH]\x1b[0m: ${input.command}');
+          print('\x1b[38;5;166m[PLAYWRIGHT-CLI]\x1b[0m: ${input.command}');
           final result = await Process.run('bash', ['-c', input.command]);
 
           // Return a structured summary so the agent can react to failure
@@ -48,33 +60,28 @@ class GeminiClient {
     );
   }
 
-  // void definePlaywrightCliTool() {
-  //   playwrightCli = ai.defineTool(
-  //     name: 'playwrightCli',
-  //     description: '''
-  //       Executes playwright-cli commands. Check playwright-cli --help for available commands.
-  //       The tool returns stdout, stderr, and the exit code. If a command fails, use the stderr or exit code to diagnose and retry.
-  //     ''',
-  //     inputSchema: schemas.PlaywrightCliInput.$schema,
-  //     fn: (input, _) async {
-  //       try {
-  //         print('\x1b[38;5;166m[PLAYWRIGHT-CLI]\x1b[0m: ${input.command}');
-  //         final result = await Process.run('bash', [
-  //           '-c',
-  //           'playwright-cli',
-  //           input.command,
-  //         ]);
+  void defineUpdateFileTool() {
+    updateFileTool = ai.defineTool(
+      name: 'updateFile',
+      description: 'Safely updates a file within the project directory.',
+      inputSchema: schemas.FileUpdateInput.$schema,
+      fn: (input, context) async {
+        // 1. Define the allowed root (e.g., project data directory)
+        final rootDir = Directory.current.path;
 
-  //         // Return a structured summary so the agent can react to failure
-  //         return {
-  //           'stdout': result.stdout,
-  //           'stderr': result.stderr,
-  //           'exitCode': result.exitCode,
-  //         }.toString();
-  //       } catch (e) {
-  //         return 'Execution failed: $e';
-  //       }
-  //     },
-  //   );
-  // }
+        // 2. Validate path to prevent directory traversal attacks (../../)
+        final targetFile = File('$rootDir/${input.path}');
+        if (!targetFile.path.startsWith(rootDir)) {
+          throw Exception(
+            'Security Error: Access denied to path: ${input.path}',
+          );
+        }
+
+        // 3. Perform the update
+        print('\x1b[38;5;166m[UPDATE FILE]\x1b[0m: ${input.path}');
+        await targetFile.writeAsString(input.content);
+        return 'Successfully updated ${input.path}';
+      },
+    );
+  }
 }
