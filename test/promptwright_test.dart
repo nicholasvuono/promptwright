@@ -1,5 +1,5 @@
 import 'package:test/test.dart';
-import 'package:promptwright/clients/gemini_client.dart' as ai;
+import 'package:promptwright/clients/open_ai_client.dart' as ai;
 import 'package:genkit_openai/genkit_openai.dart';
 import 'package:promptwright/providers/skills_provider.dart';
 import 'package:promptwright/schemas/schemas.dart' as schemas;

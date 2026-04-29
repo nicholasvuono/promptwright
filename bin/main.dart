@@ -1,79 +1,142 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:args/args.dart';
-import 'package:genkit_openai/genkit_openai.dart';
+import 'package:pool/pool.dart';
 import 'package:promptwright/providers/skills_provider.dart';
-import 'package:promptwright/clients/gemini_client.dart' as ai;
-import 'package:promptwright/schemas/schemas.dart' as schemas;
+import 'package:promptwright/clients/open_ai_client.dart' as ai;
+
+// Simple state for our tests
+enum TestStatus { pending, running, success, failed }
+
+class TestTracker {
+  final String path;
+  TestStatus status = TestStatus.pending;
+  TestTracker(this.path);
+}
 
 Future<void> main(List<String> arguments) async {
-  final parser = ArgParser();
-
-  // Define the flags
-  parser.addFlag(
-    'test',
-    abbr: 't',
-    help: 'filepath of the test case to run',
-    negatable: false,
-  );
-
   try {
     final parser = ArgParser()
-      ..addOption(
-        'test',
-        abbr: 't',
-        help: 'Path to the markdown test case file',
-        valueHelp: 'FILE_PATH', // Helpful hint in the --help output
-        mandatory: true, // Automatically errors if missing!
-      );
+      ..addOption('test', abbr: 't')
+      ..addOption('dir', abbr: 'd')
+      ..addOption('workers', abbr: 'w', defaultsTo: '1');
 
     final results = parser.parse(arguments);
+    final String testPath = (results['test'] as String?) ?? '';
+    final String testsDir = (results['dir'] as String?) ?? '';
+    final int workerCount = int.tryParse(results['workers'] ?? '1') ?? 1;
 
-    final String testPath = results['test'];
+    final selectedOption =
+        [
+          if (results.wasParsed('dir')) 'TESTS_DIR',
+          if (results.wasParsed('test')) 'TEST_PATH',
+        ].firstOrNull ??
+        'NONE';
 
-    // 1. Validate the file exists
-    if (!File(testPath).existsSync()) {
-      stderr.writeln('\x1b[31m[ERROR]\x1b[0m: File not found at "$testPath"');
-      exit(66); // 66 = EX_NOINPUT (Standard exit code for missing input)
+    if (selectedOption == 'NONE') {
+      stderr.writeln(
+        '\x1b[31m[ERROR]\x1b[0m: --test or --dir must be provided!',
+      );
+      exit(64);
     }
 
-    final gemini = ai.OpenAiClient();
-    gemini.init();
+    final testFiles = selectedOption == 'TEST_PATH'
+        ? [testPath]
+        : Directory(testsDir)
+              .listSync()
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.md'))
+              .map((file) => file.path)
+              .toList();
 
+    // Initialize tracking state
+    final trackers = testFiles.map((f) => TestTracker(f)).toList();
+
+    final openai = ai.OpenAiClient();
+    openai.init();
     final skills = loadSkills();
+    final pool = Pool(workerCount);
 
-    final prompt =
-        '''
+    // --- LIVE UI ENGINE ---
+    int frame = 0;
+    const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
+    void renderUI() {
+      // Move cursor up to the start of the test list to overwrite
+      if (frame > 0) {
+        stdout.write('\x1b[${trackers.length}A');
+      }
+
+      for (var t in trackers) {
+        String icon;
+        switch (t.status) {
+          case TestStatus.pending:
+            icon = '○';
+            break;
+          case TestStatus.running:
+            icon = '\x1b[94m${spinner[frame % spinner.length]}\x1b[0m';
+            break;
+          case TestStatus.success:
+            icon = '\x1b[32m✔\x1b[0m';
+            break;
+          case TestStatus.failed:
+            icon = '\x1b[31m✘\x1b[0m';
+            break;
+        }
+        // Clear line and print status
+        stdout.write('\x1b[2K\r$icon ${t.path}\n');
+      }
+      frame++;
+    }
+
+    // Start the "Heartbeat" for the spinner
+    final uiTimer = Timer.periodic(
+      Duration(milliseconds: 80),
+      (_) => renderUI(),
+    );
+
+    final testTasks = trackers.map((tracker) {
+      return pool.withResource(() async {
+        tracker.status = TestStatus.running;
+
+        try {
+          final prompt =
+              '''
 <system_instruction>
-You are an Test Runner. Using the skills in the <knowledge_base> below and the already installed playwright-cli tool. Run the markdown test case provided int eh <task>.
+You are an Test Runner. Run the markdown test case provided in the <task>.
 </system_instruction>
-
 <knowledge_base>
 ${skills.promptwrightSkill}
 ${skills.playwrightCliSkill}
 </knowledge_base>
-
 <task>
-Run the following test: $testPath
+Run the following test: ${tracker.path}
 </task>
 ''';
 
-    print('\x1b[94m[TEST]\x1b[0m: $testPath');
+          final response = await openai.generator(prompt);
 
-    final response = await gemini.ai.generate(
-      model: openAI.model('gpt-5-mini'),
-      prompt: prompt,
-      tools: [gemini.playwrightCli, gemini.readFile],
-      outputSchema: schemas.TestResult.$schema,
-      maxTurns: 50,
-    );
+          // Logic for pass/fail (adjust based on your actual response object)
+          if (response.output?.finalResult != null) {
+            tracker.status = TestStatus.success;
+          } else {
+            tracker.status = TestStatus.failed;
+          }
+        } catch (e) {
+          tracker.status = TestStatus.failed;
+        }
+      });
+    });
 
-    print('''\x1b[96m[RESULT]\x1b[0m:
-${response.output?.finalResult}
-Commands executed:
-${response.output?.commandList.join('\n')}
-''');
+    await Future.wait(testTasks);
+
+    uiTimer.cancel();
+    renderUI(); // Final render
+    await pool.close();
+
+    print('\n🏁 All tests finished.');
   } catch (e) {
-    stderr.writeln('Error: ${e.toString()}');
-    exit(64); // Command line usage error
+    stderr.writeln('Error: $e');
+    exit(64);
   }
 }

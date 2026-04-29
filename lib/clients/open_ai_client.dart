@@ -22,7 +22,7 @@ class OpenAiClient {
       description: 'Reads the contents of a give file.',
       inputSchema: schemas.ReadFileInput.$schema,
       fn: (input, _) async {
-        print('\x1b[38;5;166m[READ FILE]\x1b[0m: ${input.filePath}');
+        // print('\x1b[38;5;166m[READ FILE]\x1b[0m: ${input.filePath}');
         final contents = await File(
           input.filePath,
         ).readAsString(); // use streams later
@@ -41,7 +41,7 @@ class OpenAiClient {
       inputSchema: schemas.PlaywrightCliInput.$schema,
       fn: (input, _) async {
         try {
-          print('\x1b[38;5;166m[PLAYWRIGHT-CLI]\x1b[0m: ${input.command}');
+          // print('\x1b[38;5;166m[PLAYWRIGHT-CLI]\x1b[0m: ${input.command}');
           final result = await Process.run('bash', ['-c', input.command]);
 
           // Return a structured summary so the agent can react to failure
@@ -75,10 +75,20 @@ class OpenAiClient {
         }
 
         // 3. Perform the update
-        print('\x1b[38;5;166m[UPDATE FILE]\x1b[0m: ${input.path}');
+        // print('\x1b[38;5;166m[UPDATE FILE]\x1b[0m: ${input.path}');
         await targetFile.writeAsString(input.content);
         return 'Successfully updated ${input.path}';
       },
+    );
+  }
+
+  Future<GenerateResponseHelper> generator(String prompt) async {
+    return await ai.generate(
+      model: openAI.model('gpt-5-mini'),
+      prompt: prompt,
+      tools: [playwrightCli, readFile],
+      outputSchema: schemas.TestResult.$schema,
+      maxTurns: 50,
     );
   }
 }
