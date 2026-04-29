@@ -1,12 +1,9 @@
 import 'dart:io';
-
 import 'package:genkit/genkit.dart';
-// import 'package:genkit_google_genai/genkit_google_genai.dart';
 import 'package:genkit_openai/genkit_openai.dart';
-
 import 'package:promptwright/schemas/schemas.dart' as schemas;
 
-class GeminiClient {
+class OpenAiClient {
   late Genkit ai;
   late Tool playwrightCli, readFile, updateFileTool;
 

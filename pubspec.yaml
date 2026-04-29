@@ -8,6 +8,7 @@ environment:
 
 # Add regular dependencies here.
 dependencies:
+  args: ^2.7.0
   genkit: ^0.12.1
   genkit_google_genai: ^0.2.4
   genkit_openai: ^0.2.4

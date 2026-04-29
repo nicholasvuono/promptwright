@@ -1,13 +1,12 @@
 import 'package:test/test.dart';
 import 'package:promptwright/clients/gemini_client.dart' as ai;
-// import 'package:genkit_google_genai/genkit_google_genai.dart';
 import 'package:genkit_openai/genkit_openai.dart';
 import 'package:promptwright/providers/skills_provider.dart';
 import 'package:promptwright/schemas/schemas.dart' as schemas;
 
 void main() {
   test('Playwright Demo Todo MVC', () async {
-    final gemini = ai.GeminiClient();
+    final gemini = ai.OpenAiClient();
     gemini.init();
 
     final skills = loadSkills();
@@ -50,7 +49,7 @@ ${response.output?.commandList.join('\n')}
   }, timeout: Timeout(Duration(minutes: 5)));
 
   test('Playwright Demo Todo Complex MVC', () async {
-    final gemini = ai.GeminiClient();
+    final gemini = ai.OpenAiClient();
     gemini.init();
 
     final skills = loadSkills();
