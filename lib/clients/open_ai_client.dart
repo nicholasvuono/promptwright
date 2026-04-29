@@ -7,6 +7,9 @@ class OpenAiClient {
   late Genkit ai;
   late Tool playwrightCli, readFile, updateFileTool;
 
+  // A callback that we can set per-test run
+  void Function(String toolName, String detail)? onToolCall;
+
   void init() {
     ai = Genkit(
       plugins: [openAI(apiKey: Platform.environment['OPENAI_API_KEY'])],
@@ -22,10 +25,10 @@ class OpenAiClient {
       description: 'Reads the contents of a give file.',
       inputSchema: schemas.ReadFileInput.$schema,
       fn: (input, _) async {
-        // print('\x1b[38;5;166m[READ FILE]\x1b[0m: ${input.filePath}');
-        final contents = await File(
-          input.filePath,
-        ).readAsString(); // use streams later
+        // Notify the UI
+        onToolCall?.call('readFile', input.filePath);
+
+        final contents = await File(input.filePath).readAsString();
         return contents;
       },
     );
@@ -34,17 +37,14 @@ class OpenAiClient {
   void definePlaywrightCliTool() {
     playwrightCli = ai.defineTool(
       name: 'playwrightCli',
-      description: '''
-        Executes playwright-cli commands. Check playwright-cli --help for available commands.
-        The tool returns stdout, stderr, and the exit code. If a command fails, use the stderr or exit code to diagnose and retry.
-      ''',
+      description: 'Executes playwright-cli commands...',
       inputSchema: schemas.PlaywrightCliInput.$schema,
       fn: (input, _) async {
-        try {
-          // print('\x1b[38;5;166m[PLAYWRIGHT-CLI]\x1b[0m: ${input.command}');
-          final result = await Process.run('bash', ['-c', input.command]);
+        // Notify the UI with the specific command being run
+        onToolCall?.call('playwrightCli', input.command);
 
-          // Return a structured summary so the agent can react to failure
+        try {
+          final result = await Process.run('bash', ['-c', input.command]);
           return {
             'stdout': result.stdout,
             'stderr': result.stderr,
@@ -63,6 +63,7 @@ class OpenAiClient {
       description: 'Safely updates a file within the project directory.',
       inputSchema: schemas.FileUpdateInput.$schema,
       fn: (input, context) async {
+        onToolCall?.call('updateFile', input.command);
         // 1. Define the allowed root (e.g., project data directory)
         final rootDir = Directory.current.path;
 
@@ -82,7 +83,13 @@ class OpenAiClient {
     );
   }
 
-  Future<GenerateResponseHelper> generator(String prompt) async {
+  Future<GenerateResponseHelper> generator(
+    String prompt, {
+    void Function(String tool, String detail)?
+    onAction, // Pass-through listener
+  }) async {
+    onToolCall = onAction; // Set the active listener for this turn
+
     return await ai.generate(
       model: openAI.model('gpt-5-mini'),
       prompt: prompt,
