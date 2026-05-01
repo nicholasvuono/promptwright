@@ -16,7 +16,7 @@ void main() {
     final prompt =
         '''
 <system_instruction>
-You are an Test Runner. Using the skills in the <knowledge_base> below and the already installed playwright-cli tool. Run the markdown test case provided int eh <task>.
+You are an Test Runner. Using the skills in the <knowledge_base> below and the already installed playwright-cli tool. Run the markdown test case provided in the <task>. Follow the `promptwrightSkill` caching rules: use existing `## Cached` commands first when present, and call `updateFile` only if the cache is missing, a command had to be healed, or the successful commands were wildly different from the existing cached commands.
 </system_instruction>
 
 <knowledge_base>
@@ -34,7 +34,7 @@ Run the following test: $testCase
     final response = await gemini.ai.generate(
       model: openAI.model('gpt-5-mini'),
       prompt: prompt,
-      tools: [gemini.playwrightCli, gemini.readFile],
+      tools: [gemini.playwrightCli, gemini.readFile, gemini.updateFileTool],
       outputSchema: schemas.TestResult.$schema,
       maxTurns: 50,
     );
@@ -59,7 +59,7 @@ ${response.output?.commandList.join('\n')}
     final prompt =
         '''
 <system_instruction>
-You are an Test Runner. Using the skills in the <knowledge_base> below and the already installed playwright-cli tool. Run the markdown test case provided int eh <task>.
+You are an Test Runner. Using the skills in the <knowledge_base> below and the already installed playwright-cli tool. Run the markdown test case provided in the <task>. Follow the `promptwrightSkill` caching rules: use existing `## Cached` commands first when present, and call `updateFile` only if the cache is missing, a command had to be healed, or the successful commands were wildly different from the existing cached commands.
 </system_instruction>
 
 <knowledge_base>

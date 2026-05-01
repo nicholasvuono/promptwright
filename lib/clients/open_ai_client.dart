@@ -60,10 +60,11 @@ class OpenAiClient {
   void defineUpdateFileTool() {
     updateFileTool = ai.defineTool(
       name: 'updateFile',
-      description: 'Safely updates a file within the project directory.',
+      description:
+          'Safely updates a file within the project directory. For markdown tests, use this only when the ## Cached section is missing, a cached command was healed, or the successful commands were wildly different from the existing cached commands. Write the complete updated test file content.',
       inputSchema: schemas.FileUpdateInput.$schema,
       fn: (input, context) async {
-        onToolCall?.call('updateFile', input.command);
+        onToolCall?.call('updateFile', input.path);
         // 1. Define the allowed root (e.g., project data directory)
         final rootDir = Directory.current.path;
 
@@ -93,7 +94,7 @@ class OpenAiClient {
     return await ai.generate(
       model: openAI.model('gpt-5-mini'),
       prompt: prompt,
-      tools: [playwrightCli, readFile],
+      tools: [playwrightCli, readFile, updateFileTool],
       outputSchema: schemas.TestResult.$schema,
       maxTurns: 50,
     );

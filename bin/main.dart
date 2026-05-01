@@ -29,7 +29,21 @@ void workerEntry(Map<String, dynamic> message) async {
   try {
     sendPort.send({'type': 'status', 'path': path});
 
-    final prompt = 'Run test: $path using skills: ${skills.promptwrightSkill}';
+    final prompt =
+        '''
+<system_instruction>
+You are an Test Runner. Using the skills in the <knowledge_base> below and the already installed playwright-cli tool. Run the markdown test case provided in the <task>. Follow the `promptwrightSkill` caching rules: use existing `## Cached` commands first when present, and call `updateFile` only if the cache is missing, a command had to be healed, or the successful commands were wildly different from the existing cached commands.
+</system_instruction>
+
+<knowledge_base>
+${skills.promptwrightSkill}
+${skills.playwrightCliSkill}
+</knowledge_base>
+
+<task>
+Run the following test: $path
+</task>
+''';
 
     await workerAi.generator(
       prompt,
