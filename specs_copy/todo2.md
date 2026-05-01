@@ -4,7 +4,7 @@
 3. Validate a 'grocery shopping' todo was created successfully
 
 ## Cached
-playwright-cli open https://demo.playwright.dev/todomvc/
-playwright-cli fill "css=input.new-todo" "grocery shopping" --submit
-playwright-cli eval "[...document.querySelectorAll('[data-testid="todo-title"]')].some(e => e.innerText.includes('grocery shopping'))"
-playwright-cli close
+playwright-cli -s=todo2 open https://demo.playwright.dev/todomvc/
+playwright-cli -s=todo2 fill "css=input.new-todo" "grocery shopping" --submit
+playwright-cli -s=todo2 eval "[...document.querySelectorAll('[data-testid="todo-title"]')].some(e => e.innerText.includes('grocery shopping'))"
+playwright-cli -s=todo2 close

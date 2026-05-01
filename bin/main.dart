@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'dart:async';
+import 'dart:isolate';
+import 'dart:collection';
+
 import 'package:args/args.dart';
-import 'package:pool/pool.dart';
 import 'package:mason_logger/mason_logger.dart' hide Progress;
 import 'package:promptwright/providers/skills_provider.dart';
 import 'package:promptwright/clients/open_ai_client.dart' as ai;
@@ -13,6 +15,43 @@ class TestState {
   TestStatus status = TestStatus.pending;
   String action = 'Waiting...';
   TestState(this.path);
+}
+
+/// --- WORKER ISOLATE ENTRY POINT ---
+void workerEntry(Map<String, dynamic> message) async {
+  final sendPort = message['sendPort'] as SendPort;
+  final path = message['path'] as String;
+  final skills = message['skills'];
+
+  final workerAi = ai.OpenAiClient();
+  workerAi.init();
+
+  try {
+    sendPort.send({'type': 'status', 'path': path});
+
+    final prompt = 'Run test: $path using skills: ${skills.promptwrightSkill}';
+
+    await workerAi.generator(
+      prompt,
+      onAction: (tool, detail) {
+        sendPort.send({
+          'type': 'action',
+          'path': path,
+          'action':
+              '$tool: ${detail.length > 50 ? "${detail.substring(0, 49)}..." : detail}',
+        });
+      },
+    );
+
+    sendPort.send({'type': 'done', 'status': 'success', 'path': path});
+  } catch (e) {
+    sendPort.send({
+      'type': 'done',
+      'status': 'failed',
+      'path': path,
+      'error': e.toString().split('\n').first,
+    });
+  }
 }
 
 Future<void> main(List<String> arguments) async {
@@ -41,17 +80,14 @@ Future<void> main(List<String> arguments) async {
     return;
   }
 
-  // Initialize UI States
   final states = testFiles.map((f) => TestState(f)).toList();
   final skills = loadSkills();
-  final pool = Pool(workerCount);
 
-  // --- THE UI RENDER ENGINE ---
+  // --- UI RENDER ENGINE ---
   int frame = 0;
   final spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
   void render() {
-    // Move cursor up by the number of tests to overwrite
     if (frame > 0) stdout.write('\x1b[${states.length}A');
 
     for (var state in states) {
@@ -74,44 +110,87 @@ Future<void> main(List<String> arguments) async {
       final dimAction = state.status == TestStatus.running
           ? '\x1b[2m — ${state.action}\x1b[0m'
           : '';
-      final line = '$prefix${state.path}$dimAction';
 
-      // Clear line and print
+      final line = '$prefix${state.path}$dimAction';
       stdout.write('\x1b[2K\r$line\n');
     }
+
     frame++;
   }
 
-  // Start the heartbeat
-  final timer = Timer.periodic(Duration(milliseconds: 100), (_) => render());
+  final timer = Timer.periodic(
+    const Duration(milliseconds: 100),
+    (_) => render(),
+  );
 
-  final tasks = states.map((state) {
-    return pool.withResource(() async {
-      state.status = TestStatus.running;
-      final workerAi = ai.OpenAiClient();
-      workerAi.init();
+  // --- ISOLATE MANAGEMENT ---
+  final receivePort = ReceivePort();
+  final doneCompleter = Completer<void>();
+  final queue = Queue<TestState>.from(states);
 
-      try {
-        final prompt =
-            'Run test: ${state.path} using skills: ${skills.promptwrightSkill}';
+  int active = 0;
+  int completed = 0;
 
-        await workerAi.generator(
-          prompt,
-          onAction: (tool, detail) {
-            state.action =
-                '$tool: ${detail.length > 50 ? "${detail.substring(0, 49)}..." : detail}';
-          },
-        );
-        state.status = TestStatus.success;
-      } catch (e) {
-        state.status = TestStatus.failed;
-        state.action = e.toString().split('\n').first;
-      }
+  void spawnNext() async {
+    if (queue.isEmpty) return;
+    if (active >= workerCount) return;
+
+    final state = queue.removeFirst();
+    active++;
+
+    await Isolate.spawn(workerEntry, {
+      'sendPort': receivePort.sendPort,
+      'path': state.path,
+      'skills': skills,
     });
+
+    // Fill remaining capacity
+    spawnNext();
+  }
+
+  receivePort.listen((message) {
+    final path = message['path'];
+    final state = states.firstWhere((s) => s.path == path);
+
+    switch (message['type']) {
+      case 'status':
+        state.status = TestStatus.running;
+        break;
+
+      case 'action':
+        state.action = message['action'];
+        break;
+
+      case 'done':
+        state.status = message['status'] == 'success'
+            ? TestStatus.success
+            : TestStatus.failed;
+
+        if (message['error'] != null) {
+          state.action = message['error'];
+        }
+
+        active--;
+        completed++;
+
+        if (completed == states.length) {
+          receivePort.close();
+          doneCompleter.complete(); // ✅ FIX
+        } else {
+          spawnNext();
+        }
+        break;
+    }
   });
 
-  await Future.wait(tasks);
+  // Start initial workers
+  for (int i = 0; i < workerCount; i++) {
+    spawnNext();
+  }
+
+  await doneCompleter.future;
+
   timer.cancel();
-  render(); // Final draw
+  render();
   print('\n🏁 Done.');
 }
